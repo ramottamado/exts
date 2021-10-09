@@ -1,0 +1,9 @@
+{
+  "name": "Fedora Activities Icon",
+  "description": "Add Fedora icon to Activities button",
+  "uuid": "fedora-activities-icon@ramottamado.dev",
+  "shell-version": [
+    "41"
+  ],
+  "version": 1
+}
