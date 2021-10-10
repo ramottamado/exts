@@ -26,7 +26,9 @@ const Panel = imports.ui.panel;
 
 class Extension {
     constructor() {
-        this._activitiesBtn = { icon: null, container: null };
+        this._bin = null;
+        this._iconBox = null;
+        this._container = null;
     }
 
     enable() {
@@ -34,47 +36,60 @@ class Extension {
 
         let iconSize = Panel.PANEL_ICON_SIZE - Panel.APP_MENU_ICON_MARGIN;
 
-        this._activitiesBtn.icon = new St.Icon({
-            icon_size: iconSize,
-            style_class: 'fedora-activities-icon',
-            y_align: Clutter.ActorAlign.CENTER,
+        let icon = new St.Icon({
+            icon_size: iconSize
         });
 
-        let file = Gio.File.new_for_uri('file:///usr/share/icons/Bluecurve/256x256/apps/start-here.png');
+        let file = Gio.File.new_for_uri('file:///usr/share/icons/Bluecurve/' + iconSize.toString() + 'x' + iconSize.toString() + '/apps/start-here.png');
         let filePathExists = file.query_exists(null);
 
-        if (!filePathExists) {
-            this._activitiesBtn.icon.set_icon_name('start-here');
-
-            return;
-        }
-
-        let gicon = Gio.icon_new_for_string(file.get_path());
-
-        this._activitiesBtn.icon.set_gicon(gicon);
+        this._bin = new St.Bin({ name: 'fedoraOverview' });
 
         activities.remove_actor(activities.label_actor);
 
-        this._activitiesBtn.container = new St.BoxLayout();
-        this._activitiesBtn.container.add_actor(this._activitiesBtn.icon);
-        this._activitiesBtn.container.add_actor(activities.label_actor);
+        activities.add_actor(this._bin);
 
-        activities.add_actor(this._activitiesBtn.container);
+        this._iconBox = new St.Bin({
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        if (!filePathExists) {
+            this._iconBox.style_class = 'app-menu-icon';
+
+            icon.set_icon_name('start-here');
+        } else {
+            let gicon = Gio.icon_new_for_string(file.get_path());
+
+            icon.set_gicon(gicon);
+        }
+
+        this._iconBox.set_child(icon);
+
+        this._container = new St.BoxLayout({
+            style_class: 'fedora-overview-container'
+        });
+
+        this._bin.set_child(this._container);
+
+        this._container.add_actor(this._iconBox);
+        this._container.add_actor(activities.label_actor);
     }
 
     disable() {
         let activities = Main.panel.statusArea['activities'];
 
-        if (!this._activitiesBtn) {
+        if (!this._container) {
             return;
         }
 
-        if (this._activitiesBtn.container) {
-            this._activitiesBtn.container.remove_actor(this._activitiesBtn.icon);
-            this._activitiesBtn.container.remove_actor(activities.label_actor);
-            activities.remove_actor(this._activitiesBtn.container);
-            this._activitiesBtn.icon = null;
-            this._activitiesBtn.container = null;
+        if (this._container) {
+            this._container.remove_actor(this._iconBox);
+            this._container.remove_actor(activities.label_actor);
+
+            activities.remove_actor(this._bin);
+            this._bin = null;
+            this._iconBox = null;
+            this._container = null;
         }
 
         if (!activities.contains(activities.label_actor)) {
