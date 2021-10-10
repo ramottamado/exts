@@ -140,19 +140,19 @@ const Caffeine = GObject.registerClass(
 
         toggleFullscreen() {
             Mainloop.timeout_add_seconds(2, () => {
-                if (this.inFullscreen) {
+                if (this.inFullscreen && !this._inhibitorIds.includes('fullscreen')) {
                     this.addInhibit('fullscreen');
                 }
             });
 
-            if (!this.inFullscreen) {
-                this.removeInhibit('fullscreen');
+            if (!this.inFullscreen && this._inhibitorIds.includes('fullscreen')) {
+                this.removeInhibit('fullscreen', -1);
             }
         }
 
         toggleState() {
             if (this._state) {
-                this.removeInhibit('user');
+                this.removeInhibit('user', -1);
             } else {
                 this.addInhibit('user');
             }
@@ -168,9 +168,16 @@ const Caffeine = GObject.registerClass(
             );
         }
 
-        removeInhibit(inhibitorId) {
-            let index = this._inhibitorIds.indexOf(inhibitorId);
-            this._sessionManager.UninhibitRemote(this._cookies[index]);
+        removeInhibit(inhibitorId, index) {
+            let idx = index === -1 ? this._inhibitorIds.indexOf(inhibitorId) : index;
+
+            if (idx !== -1) {
+                try {
+                    this._sessionManager.UninhibitRemote(this._cookies[idx]);
+                } catch (err) {
+                    //
+                }
+            }
         }
 
         _inhibitorAdded(proxy, sender, [object]) {
@@ -184,6 +191,7 @@ const Caffeine = GObject.registerClass(
                         inhibitorId = String(inhibitorId);
 
                         if (inhibitorId !== '' && inhibitorId === this._inhibitorId) {
+                            log(this._cookie);
                             this._inhibitorIds.push(this._inhibitorId);
                             this._cookies.push(this._cookie);
                             this._objects.push(object);
@@ -219,7 +227,11 @@ const Caffeine = GObject.registerClass(
 
         destroy() {
             // remove all inhibitors
-            this._inhibitorIds.forEach(inhibitorId => this.removeInhibit(inhibitorId));
+            this._inhibitorIds.forEach((inhibitorId, index) => {
+                log('Inhibitor is ' + inhibitorId);
+                log('Index is ' + index.toString());
+                this.removeInhibit(inhibitorId, index);
+            });
 
             // disconnect from signals
             this._screen.disconnect(this._inFullscreenId);
