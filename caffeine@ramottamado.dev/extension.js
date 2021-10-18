@@ -102,7 +102,7 @@ const Caffeine = GObject.registerClass(
             this._item = new PopupMenu.PopupSubMenuMenuItem(_('Keep Screen On'), true);
             this._item.icon.icon_name = IconName;
 
-            this._toggleItem = new PopupMenu.PopupMenuItem('Turn On');
+            this._toggleItem = new PopupMenu.PopupMenuItem('Enable');
             this._toggleItem.connect('activate', this.toggleState.bind(this));
             this._item.menu.addMenuItem(this._toggleItem);
 
@@ -201,7 +201,7 @@ const Caffeine = GObject.registerClass(
                             if (this._state === false) {
                                 this._state = true;
                                 this._indicator.visible = true;
-                                this._toggleItem.label.text = "Turn Off";
+                                this._toggleItem.label.text = "Disable";
                             }
                         }
                     });
@@ -220,7 +220,7 @@ const Caffeine = GObject.registerClass(
                 if (this._inhibitorIds.length === 0) {
                     this._state = false;
                     this._indicator.visible = false;
-                    this._toggleItem.label.text = "Turn On";
+                    this._toggleItem.label.text = "Enable";
                 }
             }
         }
