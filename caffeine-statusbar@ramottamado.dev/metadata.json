@@ -3,7 +3,7 @@
     "shell-version": [
         "41"
     ],
-    "uuid": "caffeine@ramottamado.dev",
+    "uuid": "caffeine-statusbar@ramottamado.dev",
     "name": "Caffeine",
     "description": "Disable the screensaver and auto suspend"
 }

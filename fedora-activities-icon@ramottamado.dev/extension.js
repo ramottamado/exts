@@ -24,7 +24,9 @@ const { Gio, St, Clutter } = imports.gi;
 const Main = imports.ui.main;
 const Panel = imports.ui.panel;
 
-class Extension {
+const ICON_SIZE = Panel.PANEL_ICON_SIZE - Panel.APP_MENU_ICON_MARGIN;
+
+class FedoraActivitiesIcon {
     constructor() {
         this._bin = null;
         this._iconBox = null;
@@ -34,36 +36,17 @@ class Extension {
     enable() {
         let activities = Main.panel.statusArea['activities'];
 
-        let iconSize = Panel.PANEL_ICON_SIZE - Panel.APP_MENU_ICON_MARGIN;
-
-        let icon = new St.Icon({
-            icon_size: iconSize
-        });
-
-        let file = Gio.File.new_for_uri('file:///usr/share/icons/Bluecurve/' + iconSize.toString() + 'x' + iconSize.toString() + '/apps/start-here.png');
-        let filePathExists = file.query_exists(null);
-
-        this._bin = new St.Bin({ name: 'fedoraOverview' });
-
         activities.remove_actor(activities.label_actor);
 
-        activities.add_actor(this._bin);
+        this._bin = new St.Bin({
+            name: 'fedoraOverview'
+        });
 
         this._iconBox = new St.Bin({
             y_align: Clutter.ActorAlign.CENTER,
         });
 
-        if (!filePathExists) {
-            this._iconBox.style_class = 'app-menu-icon';
-
-            icon.set_icon_name('start-here');
-        } else {
-            let gicon = Gio.icon_new_for_string(file.get_path());
-
-            icon.set_gicon(gicon);
-        }
-
-        this._iconBox.set_child(icon);
+        this._iconBox.set_child(this._icon);
 
         this._container = new St.BoxLayout({
             style_class: 'fedora-overview-container'
@@ -71,8 +54,10 @@ class Extension {
 
         this._bin.set_child(this._container);
 
-        this._container.add_actor(this._iconBox);
-        this._container.add_actor(activities.label_actor);
+        this._container.add_child(this._iconBox);
+        this._container.add_child(activities.label_actor);
+
+        activities.add_actor(this._bin);
     }
 
     disable() {
@@ -96,8 +81,35 @@ class Extension {
             activities.add_actor(activities.label_actor);
         }
     }
+
+    get _icon() {
+        let icon = new St.Icon({
+            icon_size: ICON_SIZE
+        });
+
+        let file = Gio.File.new_for_uri(
+            'file:///usr/share/icons/Bluecurve/'
+            + ICON_SIZE.toString()
+            + 'x'
+            + ICON_SIZE.toString()
+            + '/apps/start-here.png');
+
+        let filePathExists = file.query_exists(null);
+
+        if (!filePathExists) {
+            this._iconBox.style_class = 'app-menu-icon';
+
+            icon.set_icon_name('start-here');
+        } else {
+            let gicon = Gio.icon_new_for_string(file.get_path());
+
+            icon.set_gicon(gicon);
+        }
+
+        return icon;
+    }
 }
 
 function init() {
-    return new Extension();
+    return new FedoraActivitiesIcon();
 }

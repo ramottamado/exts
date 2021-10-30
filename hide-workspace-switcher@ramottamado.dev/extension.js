@@ -20,7 +20,7 @@
 
 const { ThumbnailsBox } = imports.ui.workspaceThumbnail;
 
-class Extension {
+class HideWorkspaceSwitcher {
     constructor() {
         this._originalUpdateShouldShow = ThumbnailsBox.prototype._updateShouldShow;
     }
@@ -45,5 +45,5 @@ class Extension {
 }
 
 function init() {
-    return new Extension();
+    return new HideWorkspaceSwitcher();
 }

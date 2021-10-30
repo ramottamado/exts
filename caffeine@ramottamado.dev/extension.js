@@ -1,4 +1,3 @@
-/* exported enable disable init */
 /**
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -13,6 +12,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
+
+/* exported init */
 
 'use strict';
 
@@ -65,11 +66,8 @@ const DBusSessionManagerInhibitorProxy = Gio.DBusProxy.makeProxyWrapper(DBusSess
 const IndicatorName = 'Caffeine';
 const IconName = 'preferences-desktop-display-symbolic';
 
-
-let CaffeineIndicator;
-
-const Caffeine = GObject.registerClass(
-    class Caffeine extends PanelMenu.SystemIndicator {
+const Indicator = GObject.registerClass(
+    class Indicator extends PanelMenu.SystemIndicator {
         _init() {
             super._init();
 
@@ -191,7 +189,6 @@ const Caffeine = GObject.registerClass(
                         inhibitorId = String(inhibitorId);
 
                         if (inhibitorId !== '' && inhibitorId === this._inhibitorId) {
-                            log(this._cookie);
                             this._inhibitorIds.push(this._inhibitorId);
                             this._cookies.push(this._cookie);
                             this._objects.push(object);
@@ -228,8 +225,6 @@ const Caffeine = GObject.registerClass(
         destroy() {
             // remove all inhibitors
             this._inhibitorIds.forEach((inhibitorId, index) => {
-                log('Inhibitor is ' + inhibitorId);
-                log('Index is ' + index.toString());
                 this.removeInhibit(inhibitorId, index);
             });
 
@@ -255,15 +250,21 @@ const Caffeine = GObject.registerClass(
         }
     });
 
+class Caffeine {
+    constructor() {
+        this._caffeineIndicator = null;
+    }
+
+    enable() {
+        this._caffeineIndicator = new Indicator();
+    }
+
+    disable() {
+        this._caffeineIndicator.destroy();
+        this._caffeineIndicator = null;
+    }
+}
+
 function init() {
-    // Empty
-}
-
-function enable() {
-    CaffeineIndicator = new Caffeine();
-}
-
-function disable() {
-    CaffeineIndicator.destroy();
-    CaffeineIndicator = null;
+    return new Caffeine();
 }
