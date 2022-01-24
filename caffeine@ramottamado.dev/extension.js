@@ -63,6 +63,13 @@ const DBusSessionManagerInhibitorIface = '<node>\
 
 const DBusSessionManagerInhibitorProxy = Gio.DBusProxy.makeProxyWrapper(DBusSessionManagerInhibitorIface);
 
+const CaffeineDBusIface =
+    '<node>' +
+    '   <interface name="dev.ramottamado.Caffeine">' +
+    '       <method name="Toggle" />' +
+    '   </interface>' +
+    '</node>';
+
 const IndicatorName = 'Caffeine';
 const IconName = 'preferences-desktop-display-symbolic';
 
@@ -253,15 +260,24 @@ const Indicator = GObject.registerClass(
 class Caffeine {
     constructor() {
         this._caffeineIndicator = null;
+        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(CaffeineDBusIface, this);
+    }
+
+    Toggle() {
+        if (this._caffeineIndicator) {
+            this._caffeineIndicator.toggleState();
+        }
     }
 
     enable() {
         this._caffeineIndicator = new Indicator();
+        this._dbusImpl.export(Gio.DBus.session, '/dev/ramottamado/Caffeine');
     }
 
     disable() {
         this._caffeineIndicator.destroy();
         this._caffeineIndicator = null;
+        if (this._dbusImpl) this._dbusImpl.unexport();
     }
 }
 
