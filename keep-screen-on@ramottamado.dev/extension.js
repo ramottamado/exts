@@ -1,17 +1,23 @@
 /**
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-**/
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Author: Tamado Sitohang <ramot@ramottamado.dev>
+ *         Jean-Philippe Braun <eon@patapon.info>
+ * Based on caffeine GNOME shell extension from: Jean-Philippe Braun <eon@patapon.info>
+ */
 
 /* exported init */
 
@@ -27,50 +33,52 @@ const AggregateMenu = Main.panel.statusArea.aggregateMenu;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const DBusSessionManagerIface = '<node>\
-  <interface name="org.gnome.SessionManager">\
-    <method name="Inhibit">\
-        <arg type="s" direction="in" />\
-        <arg type="u" direction="in" />\
-        <arg type="s" direction="in" />\
-        <arg type="u" direction="in" />\
-        <arg type="u" direction="out" />\
-    </method>\
-    <method name="Uninhibit">\
-        <arg type="u" direction="in" />\
-    </method>\
-       <method name="GetInhibitors">\
-           <arg type="ao" direction="out" />\
-       </method>\
-    <signal name="InhibitorAdded">\
-        <arg type="o" direction="out" />\
-    </signal>\
-    <signal name="InhibitorRemoved">\
-        <arg type="o" direction="out" />\
-    </signal>\
-  </interface>\
-</node>';
+const DBusSessionManagerIface =
+    '<node>' +
+    '   <interface name="org.gnome.SessionManager">' +
+    '      <method name="Inhibit">' +
+    '          <arg type="s" direction="in" />' +
+    '          <arg type="u" direction="in" />' +
+    '          <arg type="s" direction="in" />' +
+    '          <arg type="u" direction="in" />' +
+    '          <arg type="u" direction="out" />' +
+    '      </method>' +
+    '      <method name="Uninhibit">' +
+    '          <arg type="u" direction="in" />' +
+    '      </method>' +
+    '      <method name="GetInhibitors">' +
+    '          <arg type="ao" direction="out" />' +
+    '      </method>' +
+    '      <signal name="InhibitorAdded">' +
+    '          <arg type="o" direction="out" />' +
+    '      </signal>' +
+    '      <signal name="InhibitorRemoved">' +
+    '          <arg type="o" direction="out" />' +
+    '      </signal>' +
+    '   </interface>' +
+    '</node>';
 
 const DBusSessionManagerProxy = Gio.DBusProxy.makeProxyWrapper(DBusSessionManagerIface);
 
-const DBusSessionManagerInhibitorIface = '<node>\
-  <interface name="org.gnome.SessionManager.Inhibitor">\
-    <method name="GetAppId">\
-        <arg type="s" direction="out" />\
-    </method>\
-  </interface>\
-</node>';
+const DBusSessionManagerInhibitorIface =
+    '<node>' +
+    '   <interface name="org.gnome.SessionManager.Inhibitor">' +
+    '       <method name="GetAppId">' +
+    '           <arg type="s" direction="out" />' +
+    '       </method>' +
+    '   </interface>' +
+    '</node>';
 
 const DBusSessionManagerInhibitorProxy = Gio.DBusProxy.makeProxyWrapper(DBusSessionManagerInhibitorIface);
 
-const CaffeineDBusIface =
+const KeepScreenOnDBusIface =
     '<node>' +
-    '   <interface name="dev.ramottamado.Caffeine">' +
+    '   <interface name="dev.ramottamado.KeepScreenOn">' +
     '       <method name="Toggle" />' +
     '   </interface>' +
     '</node>';
 
-const IndicatorName = 'Caffeine';
+const IndicatorName = 'KeepScreenOn';
 const IconName = 'preferences-desktop-display-symbolic';
 
 const Indicator = GObject.registerClass(
@@ -87,9 +95,7 @@ const Indicator = GObject.registerClass(
             this._cookies = [];
             this._objects = [];
 
-            this._sessionManager = new DBusSessionManagerProxy(Gio.DBus.session,
-                'org.gnome.SessionManager',
-                '/org/gnome/SessionManager');
+            this._sessionManager = new DBusSessionManagerProxy(Gio.DBus.session, 'org.gnome.SessionManager', '/org/gnome/SessionManager');
 
             // ("screen" in global) is false on 3.28, although global.screen exists
             if (typeof global.screen !== 'undefined') {
@@ -114,7 +120,7 @@ const Indicator = GObject.registerClass(
             this.menu.addMenuItem(this._item);
 
             AggregateMenu._indicators.insert_child_at_index(this, 0);
-            AggregateMenu._caffeine = this;
+            AggregateMenu._keepScreenOn = this;
 
             // Find current index of system menu
             const menuItems = AggregateMenu.menu._getMenuItems();
@@ -164,13 +170,18 @@ const Indicator = GObject.registerClass(
         }
 
         addInhibit(inhibitorId) {
-            this._sessionManager.InhibitRemote(inhibitorId,
-                0, 'Inhibit by %s'.format(IndicatorName), 12,
-                cookie => {
-                    this._cookie = cookie;
-                    this._inhibitorId = inhibitorId;
-                }
-            );
+            if (this._state) {
+                // Do nothing if already inhibited
+            } else {
+                this._sessionManager.InhibitRemote(inhibitorId,
+                    0, 'Inhibit by %s'.format(IndicatorName), 12,
+                    cookie => {
+                        log("Inhibitor cookie: " + cookie);
+                        this._cookie = cookie;
+                        this._inhibitorId = inhibitorId;
+                    }
+                );
+            }
         }
 
         removeInhibit(inhibitorId, index) {
@@ -251,36 +262,36 @@ const Indicator = GObject.registerClass(
             this._item.destroy();
             this.menu.destroy();
 
-            delete AggregateMenu._caffeine;
+            delete AggregateMenu._keepScreenOn;
 
             super.destroy();
         }
     });
 
-class Caffeine {
+class KeepScreenOn {
     constructor() {
-        this._caffeineIndicator = null;
-        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(CaffeineDBusIface, this);
+        this._indicator = null;
+        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(KeepScreenOnDBusIface, this);
     }
 
     Toggle() {
-        if (this._caffeineIndicator) {
-            this._caffeineIndicator.toggleState();
+        if (this._indicator) {
+            this._indicator.toggleState();
         }
     }
 
     enable() {
-        this._caffeineIndicator = new Indicator();
-        this._dbusImpl.export(Gio.DBus.session, '/dev/ramottamado/Caffeine');
+        this._indicator = new Indicator();
+        this._dbusImpl.export(Gio.DBus.session, '/dev/ramottamado/KeepScreenOn');
     }
 
     disable() {
-        this._caffeineIndicator.destroy();
-        this._caffeineIndicator = null;
+        this._indicator.destroy();
+        this._indicator = null;
         if (this._dbusImpl) this._dbusImpl.unexport();
     }
 }
 
 function init() {
-    return new Caffeine();
+    return new KeepScreenOn();
 }

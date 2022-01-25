@@ -3,7 +3,7 @@
     "shell-version": [
         "41"
     ],
-    "uuid": "caffeine@ramottamado.dev",
-    "name": "Caffeine",
+    "uuid": "keep-screen-on@ramottamado.dev",
+    "name": "Keep Screen On",
     "description": "Disable the screensaver and auto suspend"
 }
