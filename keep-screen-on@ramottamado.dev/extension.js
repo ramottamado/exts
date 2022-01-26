@@ -88,12 +88,10 @@ const Indicator = GObject.registerClass(
 
             this._state = false;
 
-            this._cookie = '';
-            this._inhibitorId = '';
+            this._fullscreenNum = 0;
 
-            this._inhibitorIds = [];
-            this._cookies = [];
-            this._objects = [];
+            this._objects = new Map();
+            this._inhibitors = new Map();
 
             this._sessionManager = new DBusSessionManagerProxy(Gio.DBus.session, 'org.gnome.SessionManager', '/org/gnome/SessionManager');
 
@@ -150,14 +148,29 @@ const Indicator = GObject.registerClass(
         }
 
         toggleFullscreen() {
+            let fullscreenInhibitors = Array.from(this._inhibitors.keys())
+                .filter(x => x.startsWith('fullscreen'));
+
+            fullscreenInhibitors.forEach(x => {
+                log(x);
+            });
+
             Mainloop.timeout_add_seconds(2, () => {
-                if (this.inFullscreen && !this._inhibitorIds.includes('fullscreen')) {
-                    this.addInhibit('fullscreen');
+                if (this.inFullscreen && fullscreenInhibitors.length < 1) {
+                    if (this._fullscreenNum === (Number.MAX_SAFE_INTEGER - 1)) {
+                        this._fullscreenNum = 0;
+                    }
+
+                    this.addInhibit('fullscreen-' + this._fullscreenNum.toString());
+
+                    this._fullscreenNum = this._fullscreenNum + 1;
                 }
             });
 
-            if (!this.inFullscreen && this._inhibitorIds.includes('fullscreen')) {
-                this.removeInhibit('fullscreen', -1);
+            if (!this.inFullscreen && fullscreenInhibitors.length > 0) {
+                fullscreenInhibitors.forEach(inhibitor => {
+                    this.removeInhibit(inhibitor);
+                });
             }
         }
 
@@ -170,48 +183,45 @@ const Indicator = GObject.registerClass(
         }
 
         addInhibit(inhibitorId) {
-            if (this._state) {
-                // Do nothing if already inhibited
-            } else {
+            if (!this._inhibitors.has(inhibitorId)) {
                 this._sessionManager.InhibitRemote(inhibitorId,
                     0, 'Inhibit by %s'.format(IndicatorName), 12,
                     cookie => {
-                        log("Inhibitor cookie: " + cookie);
-                        this._cookie = cookie;
-                        this._inhibitorId = inhibitorId;
+                        log("Inhibitor: " + inhibitorId + ", cookie: " + cookie);
+                        this._inhibitors.set(inhibitorId, cookie);
                     }
                 );
             }
         }
 
-        removeInhibit(inhibitorId, index) {
-            let idx = index === -1 ? this._inhibitorIds.indexOf(inhibitorId) : index;
+        removeInhibit(inhibitorId) {
+            if (this._inhibitors.has(inhibitorId)) {
+                let cookie = this._inhibitors.get(inhibitorId);
 
-            if (idx !== -1) {
                 try {
-                    this._sessionManager.UninhibitRemote(this._cookies[idx]);
+                    this._sessionManager.UninhibitRemote(cookie);
                 } catch (err) {
                     //
                 }
+
+                this._inhibitors.delete(inhibitorId);
             }
         }
 
         _inhibitorAdded(proxy, sender, [object]) {
             this._sessionManager.GetInhibitorsRemote(([inhibitors]) => {
-                for (let i of inhibitors) {
-                    let inhibitor = new DBusSessionManagerInhibitorProxy(Gio.DBus.session,
+                for (let inhibitor of inhibitors) {
+                    let remoteInhibitor = new DBusSessionManagerInhibitorProxy(
+                        Gio.DBus.session,
                         'org.gnome.SessionManager',
-                        i);
+                        inhibitor
+                    );
 
-                    inhibitor.GetAppIdRemote(inhibitorId => {
+                    remoteInhibitor.GetAppIdRemote(inhibitorId => {
                         inhibitorId = String(inhibitorId);
 
-                        if (inhibitorId !== '' && inhibitorId === this._inhibitorId) {
-                            this._inhibitorIds.push(this._inhibitorId);
-                            this._cookies.push(this._cookie);
-                            this._objects.push(object);
-                            this._inhibitorId = '';
-                            this._cookie = '';
+                        if (inhibitorId !== '' && this._inhibitors.has(inhibitorId)) {
+                            this._objects.set(object, inhibitorId);
 
                             if (this._state === false) {
                                 this._state = true;
@@ -225,25 +235,23 @@ const Indicator = GObject.registerClass(
         }
 
         _inhibitorRemoved(proxy, sender, [object]) {
-            let index = this._objects.indexOf(object);
+            let inhibitorId = this._objects.get(object);
 
-            if (index !== -1) {
-                this._inhibitorIds.splice(index, 1);
-                this._cookies.splice(index, 1);
-                this._objects.splice(index, 1);
+            if (!this._inhibitors.has(inhibitorId)) {
+                this._objects.delete(object);
+            }
 
-                if (this._inhibitorIds.length === 0) {
-                    this._state = false;
-                    this._indicator.visible = false;
-                    this._toggleItem.label.text = "Enable";
-                }
+            if (this._inhibitors.size === 0) {
+                this._state = false;
+                this._indicator.visible = false;
+                this._toggleItem.label.text = "Enable";
             }
         }
 
         destroy() {
             // remove all inhibitors
-            this._inhibitorIds.forEach((inhibitorId, index) => {
-                this.removeInhibit(inhibitorId, index);
+            this._inhibitors.forEach((cookie, inhibitor) => {
+                this.removeInhibit(inhibitor);
             });
 
             // disconnect from signals
