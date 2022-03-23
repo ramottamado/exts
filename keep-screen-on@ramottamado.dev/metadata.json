@@ -1,7 +1,8 @@
 {
     "version": 1,
     "shell-version": [
-        "41"
+        "41",
+        "42"
     ],
     "uuid": "keep-screen-on@ramottamado.dev",
     "name": "Keep Screen On",
