@@ -26,9 +26,10 @@
 const { Gio, GObject, Shell, St } = imports.gi;
 const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-const AggregateMenu = Main.panel.statusArea.aggregateMenu;
+
+const QuickSettings = imports.ui.quickSettings;
+
+const QuickSettingsMenu = imports.ui.main.panel.statusArea.quickSettings;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -81,8 +82,20 @@ const KeepScreenOnDBusIface =
 const IndicatorName = 'KeepScreenOn';
 const IconName = 'preferences-desktop-display-symbolic';
 
+const QToggle = GObject.registerClass(
+    class QToggle extends QuickSettings.QuickToggle {
+        _init() {
+            super._init({
+                label: _('Keep Screen On'),
+                iconName: IconName,
+                toggleMode: true,
+            });
+        }
+    }
+)
+
 const Indicator = GObject.registerClass(
-    class Indicator extends PanelMenu.SystemIndicator {
+    class Indicator extends QuickSettings.SystemIndicator {
         _init() {
             super._init();
 
@@ -108,29 +121,21 @@ const Indicator = GObject.registerClass(
             this._indicator.icon_name = IconName;
             this._indicator.visible = false;
 
-            this._item = new PopupMenu.PopupSubMenuMenuItem(_('Keep Screen On'), true);
-            this._item.icon.icon_name = IconName;
+            this._item = new QToggle();
+            this._item.connect('clicked', this.toggleState.bind(this));
 
-            this._toggleItem = new PopupMenu.PopupMenuItem('Enable');
-            this._toggleItem.connect('activate', this.toggleState.bind(this));
-            this._item.menu.addMenuItem(this._toggleItem);
+            this.quickSettingsItems.push(this._item);
 
-            this.menu.addMenuItem(this._item);
-
-            AggregateMenu._indicators.insert_child_at_index(this, 0);
-            AggregateMenu._keepScreenOn = this;
-
-            // Find current index of system menu
-            const menuItems = AggregateMenu.menu._getMenuItems();
-            const systemMenuIndex = menuItems.indexOf(AggregateMenu._system.menu);
-            const menuIndex = systemMenuIndex > -1 ? systemMenuIndex : 12;
-
-            // Place our menu before the system menu
-            AggregateMenu.menu.addMenuItem(this.menu, menuIndex - 2);
+            this.connect('destroy', () => {
+                this.quickSettingsItems.forEach(item => item.destroy());
+            });
 
             this._inhibitorAddedId = this._sessionManager.connectSignal('InhibitorAdded', this._inhibitorAdded.bind(this));
             this._inhibitorRemovedId = this._sessionManager.connectSignal('InhibitorRemoved', this._inhibitorRemoved.bind(this));
             this._inFullscreenId = this._screen.connect('in-fullscreen-changed', this.toggleFullscreen.bind(this));
+
+            QuickSettingsMenu._indicators.insert_child_at_index(this, 0);
+            QuickSettingsMenu._addItems(this.quickSettingsItems);
 
             this.toggleFullscreen();
         }
@@ -226,7 +231,7 @@ const Indicator = GObject.registerClass(
                             if (this._state === false) {
                                 this._state = true;
                                 this._indicator.visible = true;
-                                this._toggleItem.label.text = "Disable";
+                                this._item.checked = true;
                             }
                         }
                     });
@@ -244,7 +249,7 @@ const Indicator = GObject.registerClass(
             if (this._inhibitors.size === 0) {
                 this._state = false;
                 this._indicator.visible = false;
-                this._toggleItem.label.text = "Enable";
+                this._item.checked = false;
             }
         }
 
@@ -266,11 +271,6 @@ const Indicator = GObject.registerClass(
                 this._sessionManager.disconnectSignal(this._inhibitorRemovedId);
                 this._inhibitorRemovedId = 0;
             }
-
-            this._item.destroy();
-            this.menu.destroy();
-
-            delete AggregateMenu._keepScreenOn;
 
             super.destroy();
         }

@@ -3,7 +3,9 @@
   "description": "Add Fedora icon to Activities button",
   "uuid": "fedora-activities-icon@ramottamado.dev",
   "shell-version": [
-    "41"
+    "41",
+    "42",
+    "43"
   ],
   "version": 1
 }
