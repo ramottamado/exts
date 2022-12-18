@@ -26,7 +26,15 @@ const Gio = imports.gi.Gio;
 class FedoraActivitiesIcon {
     constructor() { }
 
-    enable() { }
+    enable() {
+        let file = Gio.File.new_for_uri("file:///usr/share/icons/hicolor/scalable/apps/start-here.svg");
+
+        let filePathExists = file.query_exists(null);
+
+        if (!filePathExists) {
+            throw new Error("Extension not supported!");
+        }
+    }
 
     disable() { }
 }
