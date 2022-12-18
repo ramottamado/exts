@@ -1,3 +1,9 @@
-#fedoraOverview .fedora-overview-container {
-    spacing: 6px;
+#panel .panel-button#panelActivities {
+    background-image: url("file:///usr/share/icons/hicolor/scalable/apps/start-here.svg");
+    background-size: 16px 16px;
+    background-position: 18px 8px;
+}
+
+#panel .panel-button#panelActivities>* {
+    padding-left: 22px;
 }

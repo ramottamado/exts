@@ -15,102 +15,20 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
  * Author: Tamado Sitohang <ramot@ramottamado.dev>
- *         Javad Rahmatzadeh <eon@patapon.info>
- * Based on Just Perfection GNOME shell extension from: Javad Rahmatzadeh
  */
 
 /* exported init */
 
 'use strict';
 
-const { Gio, St, Clutter } = imports.gi;
-const Main = imports.ui.main;
-const Panel = imports.ui.panel;
-
-const ICON_SIZE = Panel.PANEL_ICON_SIZE - Panel.APP_MENU_ICON_MARGIN;
+const Gio = imports.gi.Gio;
 
 class FedoraActivitiesIcon {
-    constructor() {
-        this._bin = null;
-        this._iconBox = null;
-        this._container = null;
-    }
+    constructor() { }
 
-    enable() {
-        let activities = Main.panel.statusArea['activities'];
+    enable() { }
 
-        activities.remove_actor(activities.label_actor);
-
-        this._bin = new St.Bin({
-            name: 'fedoraOverview'
-        });
-
-        this._iconBox = new St.Bin({
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-
-        this._iconBox.set_child(this._icon);
-
-        this._container = new St.BoxLayout({
-            style_class: 'fedora-overview-container'
-        });
-
-        this._bin.set_child(this._container);
-
-        this._container.add_child(this._iconBox);
-        this._container.add_child(activities.label_actor);
-
-        activities.add_actor(this._bin);
-    }
-
-    disable() {
-        let activities = Main.panel.statusArea['activities'];
-
-        if (!this._container) {
-            return;
-        }
-
-        if (this._container) {
-            this._container.remove_actor(this._iconBox);
-            this._container.remove_actor(activities.label_actor);
-
-            activities.remove_actor(this._bin);
-            this._bin = null;
-            this._iconBox = null;
-            this._container = null;
-        }
-
-        if (!activities.contains(activities.label_actor)) {
-            activities.add_actor(activities.label_actor);
-        }
-    }
-
-    get _icon() {
-        let icon = new St.Icon({
-            icon_size: ICON_SIZE
-        });
-
-        let file = Gio.File.new_for_uri(
-            'file:///usr/share/icons/Bluecurve/'
-            + ICON_SIZE.toString()
-            + 'x'
-            + ICON_SIZE.toString()
-            + '/apps/start-here.png');
-
-        let filePathExists = file.query_exists(null);
-
-        if (!filePathExists) {
-            this._iconBox.style_class = 'app-menu-icon';
-
-            icon.set_icon_name('start-here');
-        } else {
-            let gicon = Gio.icon_new_for_string(file.get_path());
-
-            icon.set_gicon(gicon);
-        }
-
-        return icon;
-    }
+    disable() { }
 }
 
 function init() {
