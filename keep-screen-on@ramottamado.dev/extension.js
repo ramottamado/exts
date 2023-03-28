@@ -31,6 +31,17 @@ const QuickSettings = imports.ui.quickSettings;
 
 const QuickSettingsMenu = imports.ui.main.panel.statusArea.quickSettings;
 
+function addQuickSettingsItems(items) {
+    // Add the items with the built-in function
+    QuickSettingsMenu._addItems(items);
+
+    // Ensure the tile(s) are above the background apps menu
+    for (const item of items) {
+        QuickSettingsMenu.menu._grid.set_child_below_sibling(item,
+            QuickSettingsMenu._backgroundApps.quickSettingsItems[0]);
+    }
+}
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -86,7 +97,7 @@ const QToggle = GObject.registerClass(
     class QToggle extends QuickSettings.QuickToggle {
         _init() {
             super._init({
-                label: _('Keep Screen On'),
+                title: _('Keep Screen On'),
                 iconName: IconName,
                 toggleMode: true,
             });
@@ -135,7 +146,13 @@ const Indicator = GObject.registerClass(
             this._inFullscreenId = this._screen.connect('in-fullscreen-changed', this.toggleFullscreen.bind(this));
 
             QuickSettingsMenu._indicators.insert_child_at_index(this, 0);
-            QuickSettingsMenu._addItems(this.quickSettingsItems);
+            addQuickSettingsItems(this.quickSettingsItems);
+            // QuickSettingsMenu._addItems(this.quickSettingsItems);
+
+            // for (const item of this.quickSettingsItems) {
+            //     QuickSettingsMenu.menu._grid.set_child_below_sibling(item,
+            //         QuickSettingsMenu._backgroundApps.quickSettingsItems[0]);
+            // }
 
             this.toggleFullscreen();
         }
