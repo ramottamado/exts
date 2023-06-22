@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@girs/gnome-shell": "^3.0.0"
+  }
+}
