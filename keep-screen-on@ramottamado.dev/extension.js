@@ -83,19 +83,6 @@ const DBusSessionManagerInhibitorIface =
 
 const DBusSessionManagerInhibitorProxy = Gio.DBusProxy.makeProxyWrapper(DBusSessionManagerInhibitorIface);
 
-const DBusDBusProxyIface =
-    '<node>' +
-    '   <interface name="org.freedesktop.DBus">' +
-    '      <signal name="NameOwnerChanged">' +
-    '        <arg type="s"/>' +
-    '        <arg type="s"/>' +
-    '        <arg type="s"/>' +
-    '      </signal>' +
-    '   </interface>' +
-    '</node>';
-
-const DBusDBusProxy = Gio.DBusProxy.makeProxyWrapper(DBusDBusProxyIface);
-
 const KeepScreenOnDBusIface =
     '<node>' +
     '   <interface name="dev.ramottamado.KeepScreenOn">' +
@@ -128,7 +115,6 @@ const Indicator = GObject.registerClass(
             this._objects = new Map();
             this._inhibitors = new Map();
             this._sessionManager = new DBusSessionManagerProxy(Gio.DBus.session, 'org.gnome.SessionManager', '/org/gnome/SessionManager');
-            this._dbusProxy = new DBusDBusProxy(Gio.DBus.session, 'org.freedesktop.DBus', '/org/freedesktop/DBus');
             this._indicator = this._addIndicator();
             this._indicator.icon_name = IconName;
             this._indicator.visible = false;
@@ -144,7 +130,6 @@ const Indicator = GObject.registerClass(
 
             this._inhibitorAddedId = this._sessionManager.connectSignal('InhibitorAdded', this._inhibitorAdded.bind(this));
             this._inhibitorRemovedId = this._sessionManager.connectSignal('InhibitorRemoved', this._inhibitorRemoved.bind(this));
-            this._dbusProxyId = this._dbusProxy.connectSignal('NameOwnerChanged', this._toggleMpris.bind(this));
 
             QuickSettingsMenu._indicators.insert_child_at_index(this, 0);
             addQuickSettingsItems(this.quickSettingsItems);
@@ -152,7 +137,7 @@ const Indicator = GObject.registerClass(
 
         toggleState() {
             if (this._state) {
-                this.removeAllInhibit();
+                this.removeAllInhibitor();
             } else {
                 this.addInhibit('user');
             }
@@ -177,50 +162,23 @@ const Indicator = GObject.registerClass(
                 try {
                     this._sessionManager.UninhibitRemote(cookie);
                 } catch (err) {
-                    log(err);
-
-                    return;
+                    //
                 }
 
                 this._inhibitors.delete(inhibitorId);
             }
         }
 
-        removeAllInhibit() {
-            this._inhibitors.forEach((value, key, _map) => {
+        removeAllInhibitor() {
+            this._inhibitors.forEach((value, key) => {
                 try {
                     this._sessionManager.UninhibitRemote(value);
                 } catch (err) {
-                    log(err);
-
-                    return;
+                    //
                 }
 
                 this._inhibitors.delete(key);
             });
-        }
-
-        _toggleMpris(_proxy, _sender, [name, old_owner, new_owner]) {
-            let mprisInhibitors = Array.from(this._inhibitors.keys())
-                .filter(x => x.startsWith('mpris'));
-
-            if (name && name.startsWith("org.mpris.MediaPlayer2")) {
-                if (new_owner && mprisInhibitors.length < 1) {
-                    if (this._mprisNum === (Number.MAX_SAFE_INTEGER - 1)) {
-                        this._mprisNum = 0;
-                    }
-
-                    this.addInhibit('mpris-' + this._mprisNum.toString());
-
-                    this._mprisNum = this._mprisNum + 1;
-                }
-
-                if (old_owner && mprisInhibitors.length > 0) {
-                    mprisInhibitors.forEach(inhibitor => {
-                        this.removeInhibit(inhibitor);
-                    });
-                }
-            }
         }
 
         _inhibitorAdded(_proxy, _sender, [object]) {
@@ -265,14 +223,7 @@ const Indicator = GObject.registerClass(
 
         destroy() {
             // remove all inhibitors
-            this._inhibitors.forEach((_cookie, inhibitor) => {
-                this.removeInhibit(inhibitor);
-            });
-
-            if (this._dbusProxyId) {
-                this._dbusProxy.disconnectSignal(this._dbusProxyId);
-                this._dbusProxyId = 0;
-            }
+            this.removeAllInhibitor();
 
             if (this._inhibitorAddedId) {
                 this._sessionManager.disconnectSignal(this._inhibitorAddedId);
