@@ -1,8 +1,6 @@
 {
     "version": 2,
     "shell-version": [
-        "43",
-        "44",
         "45"
     ],
     "uuid": "hide-window-caption@ramottamado.dev",

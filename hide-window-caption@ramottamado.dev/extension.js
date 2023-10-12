@@ -1,9 +1,11 @@
 // -*- mode: js2; indent-tabs-mode: nil; js2-basic-offset: 4 -*-
 
-'use strict';
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-/** */
-function enable() { }
+export default class HideWindowCaptionExtension extends Extension {
+    /** */
+    enable() { console.log("HideWindowCaptionExtension enabled.") }
 
-/** */
-function disable() { }
+    /** */
+    disable() { console.log("HideWindowCaptionExtension disabled.") }
+}

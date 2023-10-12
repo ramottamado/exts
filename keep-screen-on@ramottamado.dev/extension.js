@@ -18,32 +18,16 @@
  *         Jean-Philippe Braun <eon@patapon.info>
  * Based on caffeine GNOME shell extension from: Jean-Philippe Braun <eon@patapon.info>
  */
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-/* exported init */
+import Gio from 'gi://Gio';
+import GObject from 'gi://Gobject';
 
-'use strict';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
-const { Gio, GObject, Shell, St } = imports.gi;
-const Main = imports.ui.main;
-const Mainloop = imports.mainloop;
-
-const QuickSettings = imports.ui.quickSettings;
-
-const QuickSettingsMenu = imports.ui.main.panel.statusArea.quickSettings;
-
-function addQuickSettingsItems(items) {
-    // Add the items with the built-in function
-    QuickSettingsMenu._addItems(items);
-
-    // Ensure the tile(s) are above the background apps menu
-    for (const item of items) {
-        QuickSettingsMenu.menu._grid.set_child_below_sibling(item,
-            QuickSettingsMenu._backgroundApps.quickSettingsItems[0]);
-    }
-}
-
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
 
 const DBusSessionManagerIface =
     '<node>' +
@@ -93,8 +77,8 @@ const KeepScreenOnDBusIface =
 const IndicatorName = 'KeepScreenOn';
 const IconName = 'preferences-desktop-display-symbolic';
 
-const QToggle = GObject.registerClass(
-    class QToggle extends QuickSettings.QuickToggle {
+const KeepScreenOnToggle = GObject.registerClass(
+    class KeepScreenOnToggle extends QuickSettings.QuickToggle {
         _init() {
             super._init({
                 title: _('Keep Screen On'),
@@ -111,7 +95,6 @@ const Indicator = GObject.registerClass(
             super._init();
 
             this._state = false;
-            this._mprisNum = 0;
             this._objects = new Map();
             this._inhibitors = new Map();
             this._sessionManager = new DBusSessionManagerProxy(Gio.DBus.session, 'org.gnome.SessionManager', '/org/gnome/SessionManager');
@@ -119,53 +102,32 @@ const Indicator = GObject.registerClass(
             this._indicator.icon_name = IconName;
             this._indicator.visible = false;
 
-            this._item = new QToggle();
-            this._item.connect('clicked', this.toggleState.bind(this));
+            this._toggle = new KeepScreenOnToggle();
+            this._toggle.connect('clicked', this.toggleState.bind(this));
 
-            this.quickSettingsItems.push(this._item);
-
-            this.connect('destroy', () => {
-                this.quickSettingsItems.forEach(item => item.destroy());
-            });
+            this.quickSettingsItems.push(this._toggle);
 
             this._inhibitorAddedId = this._sessionManager.connectSignal('InhibitorAdded', this._inhibitorAdded.bind(this));
             this._inhibitorRemovedId = this._sessionManager.connectSignal('InhibitorRemoved', this._inhibitorRemoved.bind(this));
-
-            QuickSettingsMenu._indicators.insert_child_at_index(this, 0);
-            addQuickSettingsItems(this.quickSettingsItems);
         }
 
         toggleState() {
             if (this._state) {
                 this.removeAllInhibitor();
             } else {
-                this.addInhibit('user');
+                this.addInhibitor('user');
             }
         }
 
-        addInhibit(inhibitorId) {
+        addInhibitor(inhibitorId) {
             if (!this._inhibitors.has(inhibitorId)) {
                 this._sessionManager.InhibitRemote(inhibitorId,
                     0, 'Inhibit by %s'.format(IndicatorName), 12,
                     cookie => {
-                        log("Inhibitor: " + inhibitorId + ", cookie: " + cookie);
+                        console.debug("Inhibitor: " + inhibitorId + ", cookie: " + cookie);
                         this._inhibitors.set(inhibitorId, cookie);
                     }
                 );
-            }
-        }
-
-        removeInhibit(inhibitorId) {
-            if (this._inhibitors.has(inhibitorId)) {
-                let cookie = this._inhibitors.get(inhibitorId);
-
-                try {
-                    this._sessionManager.UninhibitRemote(cookie);
-                } catch (err) {
-                    //
-                }
-
-                this._inhibitors.delete(inhibitorId);
             }
         }
 
@@ -199,7 +161,7 @@ const Indicator = GObject.registerClass(
                             if (this._state === false) {
                                 this._state = true;
                                 this._indicator.visible = true;
-                                this._item.checked = true;
+                                this._toggle.checked = true;
                             }
                         }
                     });
@@ -217,7 +179,7 @@ const Indicator = GObject.registerClass(
             if (this._inhibitors.size === 0) {
                 this._state = false;
                 this._indicator.visible = false;
-                this._item.checked = false;
+                this._toggle.checked = false;
             }
         }
 
@@ -239,12 +201,7 @@ const Indicator = GObject.registerClass(
         }
     });
 
-class KeepScreenOn {
-    constructor() {
-        this._indicator = null;
-        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(KeepScreenOnDBusIface, this);
-    }
-
+export default class KeepScreenOnExtension extends Extension {
     Toggle() {
         if (this._indicator) {
             this._indicator.toggleState();
@@ -253,16 +210,16 @@ class KeepScreenOn {
 
     enable() {
         this._indicator = new Indicator();
+        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(KeepScreenOnDBusIface, this);
         this._dbusImpl.export(Gio.DBus.session, '/dev/ramottamado/KeepScreenOn');
+
+        Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
     }
 
     disable() {
+        this._indicator.quickSettingsItems.forEach(item => item.destroy());
         this._indicator.destroy();
         this._indicator = null;
         if (this._dbusImpl) this._dbusImpl.unexport();
     }
-}
-
-function init() {
-    return new KeepScreenOn();
 }
