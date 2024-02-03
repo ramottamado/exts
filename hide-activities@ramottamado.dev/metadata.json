@@ -1,0 +1,10 @@
+{
+  "description": "Hides the Activities button from the status bar (the hot corner and keyboard shortcut keeps working).",
+  "name": "Hide Activities Button",
+  "shell-version": [
+    "45"
+  ],
+  "url": "https://github.com/ramottamado/exts",
+  "uuid": "hide-activities@ramottamado.dev",
+  "version": 45
+}
