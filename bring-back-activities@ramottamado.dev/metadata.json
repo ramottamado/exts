@@ -1,0 +1,10 @@
+{
+  "description": "Bring back the Activities button Gnome 44.",
+  "name": "Bring Back Activities Button",
+  "shell-version": [
+    "45"
+  ],
+  "url": "https://github.com/ramottamado/exts",
+  "uuid": "bring-back-activities@ramottamado.dev",
+  "version": 1
+}
