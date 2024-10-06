@@ -13,7 +13,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 export default class BringBackActivitiesButtonExtension extends Extension {
   enable() {
     // Destroy Overview Indicator
-    this._activitiesButton = Main.panel.statusArea["activities"];
+    this._activitiesButton = Main.panel.statusArea.activities;
     this._activitiesButtonChildren = this._activitiesButton.get_children();
 
     this._activitiesLabel = new St.Label({
@@ -25,13 +25,13 @@ export default class BringBackActivitiesButtonExtension extends Extension {
       this._activitiesButton.remove_child(child);
     });
 
-    this._activitiesButton.add_actor(this._activitiesLabel);
-    this._activitiesButton.label_actor = this._activitiesLabel;
+    this._activitiesButton.add_child(this._activitiesLabel);
+    // this._activitiesButton.label_actor = this._activitiesLabel;
   }
 
   disable() {
-    this._activitiesButton.label_actor = null;
-    this._activitiesButton.remove_actor(this._activitiesLabel);
+    // this._activitiesButton.label_actor = null;
+    this._activitiesButton.remove_child(this._activitiesLabel);
 
     this._activitiesButtonChildren.map(child => {
       this._activitiesButton.add_child(child);
