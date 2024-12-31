@@ -1,9 +1,0 @@
-{
-    "version": 3,
-    "shell-version": [
-        "45", "46", "47"
-    ],
-    "uuid": "keep-screen-on@ramottamado.dev",
-    "name": "Keep Screen On",
-    "description": "Disable the screensaver and auto suspend."
-}

@@ -14,7 +14,7 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * Author: Tamado Sitohang <ramot@ramottamado.dev>
+ * Author: Tamado Sitohang <tamado@tamado.codes>
  *         Jean-Philippe Braun <eon@patapon.info>
  * Based on caffeine GNOME shell extension from: Jean-Philippe Braun <eon@patapon.info>
  */
@@ -65,21 +65,21 @@ const DBusSessionManagerInhibitorIface =
 
 const DBusSessionManagerInhibitorProxy = Gio.DBusProxy.makeProxyWrapper(DBusSessionManagerInhibitorIface);
 
-const KeepScreenOnDBusIface =
+const DisableAutoSuspendDBusIface =
     '<node>' +
-    '   <interface name="dev.ramottamado.KeepScreenOn">' +
+    '   <interface name="codes.tamado.DisableAutoSuspend">' +
     '       <method name="Toggle" />' +
     '   </interface>' +
     '</node>';
 
-const IndicatorName = 'KeepScreenOn';
-const IconName = 'emoji-objects-symbolic';
+const IndicatorName = 'DisableAutoSuspend';
+const IconName = 'preferences-desktop-screensaver-symbolic';
 
-const KeepScreenOnToggle = GObject.registerClass(
-    class KeepScreenOnToggle extends QuickSettings.QuickToggle {
+const DisableAutoSuspendToggle = GObject.registerClass(
+    class DisableAutoSuspendToggle extends QuickSettings.QuickToggle {
         _init() {
             super._init({
-                title: _('Keep Screen On'),
+                title: _('Disable Auto Suspend'),
                 iconName: IconName,
                 toggleMode: true,
             });
@@ -100,7 +100,7 @@ const Indicator = GObject.registerClass(
             this._indicator.icon_name = IconName;
             this._indicator.visible = false;
 
-            this._toggle = new KeepScreenOnToggle();
+            this._toggle = new DisableAutoSuspendToggle();
             this._toggle.connect('clicked', this.toggleState.bind(this));
 
             this.quickSettingsItems.push(this._toggle);
@@ -120,7 +120,7 @@ const Indicator = GObject.registerClass(
         addInhibitor(inhibitorId) {
             if (!this._inhibitors.has(inhibitorId)) {
                 this._sessionManager.InhibitRemote(inhibitorId,
-                    0, 'Inhibit by %s'.format(IndicatorName), 12,
+                    0, 'Inhibit by %s'.format(IndicatorName), 4,
                     cookie => {
                         console.debug("Inhibitor: " + inhibitorId + ", cookie: " + cookie);
                         this._inhibitors.set(inhibitorId, cookie);
@@ -199,7 +199,7 @@ const Indicator = GObject.registerClass(
         }
     });
 
-export default class KeepScreenOnExtension extends Extension {
+export default class DisableAutoSuspendExtension extends Extension {
     Toggle() {
         if (this._indicator) {
             this._indicator.toggleState();
@@ -208,8 +208,8 @@ export default class KeepScreenOnExtension extends Extension {
 
     enable() {
         this._indicator = new Indicator();
-        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(KeepScreenOnDBusIface, this);
-        this._dbusImpl.export(Gio.DBus.session, '/dev/ramottamado/KeepScreenOn');
+        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(DisableAutoSuspendDBusIface, this);
+        this._dbusImpl.export(Gio.DBus.session, '/codes/tamado/DisableAutoSuspend');
 
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
     }

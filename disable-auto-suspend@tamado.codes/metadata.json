@@ -1,0 +1,15 @@
+{
+    "version": 4,
+    "shell-version": [
+        "45",
+        "46",
+        "47"
+    ],
+    "uuid": "disable-auto-suspend@tamado.codes",
+    "name": "Disable Auto Suspend",
+    "description": "Disable auto suspend.",
+    "session-modes": [
+        "user",
+        "unlock-dialog"
+    ]
+}
